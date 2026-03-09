@@ -77,7 +77,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onSignUpSuccess }) => {
         createFormData.append('image', image);
       }
 
-      const response = await fetch('http://localhost:3000/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
         method: 'POST',
         body: createFormData,
       });

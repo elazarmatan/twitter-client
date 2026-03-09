@@ -104,7 +104,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
         Promise.all(
           user.followers.map(async (u) => {
             try {
-              const r = await fetch(`http://localhost:3000/users/findByUsername/${u}`);
+              const r = await fetch(`${import.meta.env.VITE_API_URL}/users/findByUsername/${u}`);
               return r.ok ? await r.json() : null;
             } catch {
               return null;
@@ -119,7 +119,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
         Promise.all(
           user.following.map(async (u) => {
             try {
-              const r = await fetch(`http://localhost:3000/users/findByUsername/${u}`);
+              const r = await fetch(`${import.meta.env.VITE_API_URL}/users/findByUsername/${u}`);
               return r.ok ? await r.json() : null;
             } catch {
               return null;

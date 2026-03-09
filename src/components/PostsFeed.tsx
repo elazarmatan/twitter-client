@@ -25,7 +25,7 @@ const PostsFeed: React.FC = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch('http://localhost:3000/posts');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/posts`);
         if (!response.ok) {
           throw new Error('Failed to fetch posts');
         }

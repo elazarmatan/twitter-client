@@ -47,7 +47,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, currentUser, onFoll
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/users/findByUsername/${username}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/findByUsername/${username}`);
         if (!response.ok) {
           throw new Error('Failed to fetch user');
         }
@@ -64,7 +64,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, currentUser, onFoll
           const followersData = await Promise.all(
             userData.followers.map(async (followerUsername) => {
               try {
-                const response = await fetch(`http://localhost:3000/users/findByUsername/${followerUsername}`);
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/users/findByUsername/${followerUsername}`);
                 if (response.ok) {
                   return await response.json();
                 }
@@ -83,7 +83,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, currentUser, onFoll
           const followingData = await Promise.all(
             userData.following.map(async (followingUsername) => {
               try {
-                const response = await fetch(`http://localhost:3000/users/findByUsername/${followingUsername}`);
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/users/findByUsername/${followingUsername}`);
                 if (response.ok) {
                   return await response.json();
                 }

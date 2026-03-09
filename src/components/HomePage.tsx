@@ -66,7 +66,7 @@ const HomePage: React.FC<HomePageProps> = ({ user, token, onLogout }) => {
   const commentMutation = useMutation({ mutationFn: addComment, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }) });
   const createPostMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await fetch('http://localhost:3000/posts', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts`, {
         method: 'POST', body: formData, headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to create post');
@@ -228,14 +228,11 @@ const HomePage: React.FC<HomePageProps> = ({ user, token, onLogout }) => {
         <Box
           sx={{
             flex: 1,
-            maxWidth: 600,
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
             borderRight: '1px solid #2f3336',
-            // center the 600px column in the remaining space
-            mx: 'auto',
-          }}
+            }}
         >
           {/* Compose strip (desktop only) — sticky inside column, not scrollable */}
           {!isMobile && (
