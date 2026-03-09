@@ -36,6 +36,7 @@ interface UserProfilePageProps {
   username: string;
   currentUser?: string;
   onClose: () => void;
+  onLogout?: () => void;
 }
 
 function TabPanel(props: any) {
@@ -51,7 +52,7 @@ function TabPanel(props: any) {
   );
 }
 
-const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser, onClose }) => {
+const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser, onClose, onLogout }) => {
   const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
   const [followersList, setFollowersList] = useState<User[]>([]);
@@ -146,8 +147,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
           bgcolor: '#000',
           border: '1px solid #2f3336',
           borderRadius: 4,
+          height: '90vh',        // קבוע תמיד
           maxHeight: '90vh',
-          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',    // הסקרול יהיה פנימה
         },
       }}
     >
@@ -159,19 +163,18 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
           px: 2,
           py: 1,
           borderBottom: '1px solid #2f3336',
-          position: 'sticky',
-          top: 0,
           bgcolor: 'rgba(0,0,0,0.85)',
           backdropFilter: 'blur(12px)',
           zIndex: 10,
           gap: 2,
+          flexShrink: 0,
         }}
       >
         <IconButton onClick={onClose} size="small" sx={{ color: '#e7e9ea' }}>
           <ArrowBackIcon />
         </IconButton>
         {user && (
-          <Box>
+          <Box sx={{ flex: 1 }}>
             <Typography variant="body1" fontWeight={800} sx={{ color: '#e7e9ea', lineHeight: 1.2 }}>
               {user.name}
             </Typography>
@@ -180,9 +183,40 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
             </Typography>
           </Box>
         )}
+        {/* Logout — only shown on own profile */}
+        {currentUser && currentUser === username && onLogout && (
+          <Button
+            size="small"
+            onClick={() => { onClose(); onLogout(); }}
+            sx={{
+              borderRadius: 20,
+              fontWeight: 700,
+              textTransform: 'none',
+              color: '#f4212e',
+              border: '1px solid #f4212e',
+              px: 2,
+              '&:hover': { bgcolor: 'rgba(244,33,46,0.1)' },
+            }}
+          >
+            Log out
+          </Button>
+        )}
       </Box>
 
-      <DialogContent sx={{ p: 0 }}>
+      {/* Scrollable content */}
+      <DialogContent
+        sx={{
+          p: 0,
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          '&::-webkit-scrollbar': { width: 6 },
+          '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+          '&::-webkit-scrollbar-thumb': { bgcolor: '#333639', borderRadius: 99 },
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#333639 transparent',
+        }}
+      >
         {userLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress sx={{ color: '#1d9bf0' }} />
@@ -264,7 +298,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
                 {user.name}
               </Typography>
               <Typography variant="body2" sx={{ color: '#71767b', mb: 1 }}>
-                @{user.username}
+                {user.username}
               </Typography>
               {user.bio && (
                 <Typography variant="body1" sx={{ color: '#e7e9ea', mb: 1.5, lineHeight: 1.5 }}>
@@ -397,7 +431,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
                         }
                         secondary={
                           <Typography variant="caption" sx={{ color: '#71767b' }}>
-                            @{follower.username}
+                            {follower.username}
                           </Typography>
                         }
                       />
@@ -438,7 +472,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser
                         }
                         secondary={
                           <Typography variant="caption" sx={{ color: '#71767b' }}>
-                            @{f.username}
+                            {f.username}
                           </Typography>
                         }
                       />

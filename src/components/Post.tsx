@@ -47,7 +47,7 @@ const PostComponent: React.FC<PostProps> = ({ post, currentUser, onLike, onUnlik
             sx={{ color: '#e7e9ea', '&:hover': { textDecoration: 'underline', cursor: 'pointer' } }}>
             {postUser?.name || post.username}
           </Typography>
-          <Typography variant="body2" sx={{ color: '#71767b' }}>@{post.username}</Typography>
+          <Typography variant="body2" sx={{ color: '#71767b' }}>{post.username}</Typography>
         </Box>
 
         {/* Text */}
@@ -148,7 +148,7 @@ const PostComponent: React.FC<PostProps> = ({ post, currentUser, onLike, onUnlik
                 </Avatar>
                 <Box sx={{ bgcolor: '#16181c', borderRadius: 2, px: 1.5, py: 1, flex: 1 }}>
                   <Typography variant="caption" fontWeight={700} sx={{ color: '#e7e9ea', display: 'block' }}>
-                    @{c.username}
+                    {c.username}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#c4cfd6', fontSize: '0.85rem' }}>
                     {c.description}

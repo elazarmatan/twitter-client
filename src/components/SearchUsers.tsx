@@ -71,7 +71,7 @@ const SearchUsers: React.FC<SearchUsersProps> = ({ onUserClick }) => {
                 }
                 secondary={
                   <Typography variant="caption" sx={{ color: '#71767b' }}>
-                    @{user.username}
+                    {user.username}
                   </Typography>
                 }
               />
