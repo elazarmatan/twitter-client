@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Avatar, Box, Chip, IconButton, TextField, Button } from '@mui/material';
+import { Typography, Avatar, Box, IconButton, TextField, Button } from '@mui/material';
 import { Favorite, FavoriteBorder, ChatBubbleOutline } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { getUser } from '../api';

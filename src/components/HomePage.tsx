@@ -89,10 +89,10 @@ const HomePage: React.FC<HomePageProps> = ({ user, token, onLogout }) => {
     ));
 
   // How tall is the sticky header inside the feed column:
-  // desktop = compose (73) + tabs (52), mobile = tabs (52) only
-  const feedStickyHeaderH = isMobile ? TABS_H : COMPOSE_H + TABS_H;
-  // Total fixed height above the scrollable feed list
-  const feedScrollTop = APPBAR_H + feedStickyHeaderH;
+//   // desktop = compose (73) + tabs (52), mobile = tabs (52) only
+//   const feedStickyHeaderH = isMobile ? TABS_H : COMPOSE_H + TABS_H;
+//   // Total fixed height above the scrollable feed list
+//   const feedScrollTop = APPBAR_H + feedStickyHeaderH;
 
   return (
     /**

@@ -15,7 +15,7 @@ import {
   IconButton,
   Button,
 } from '@mui/material';
-import { Close as CloseIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUser, getPosts, followUserApi, unfollowUserApi } from '../api';
 import PostComponent from './Post';
