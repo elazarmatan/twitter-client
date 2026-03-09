@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   Box,
   Typography,
@@ -13,11 +12,13 @@ import {
   ListItemAvatar,
   ListItemText,
   CircularProgress,
+  IconButton,
+  Button,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { getUser } from '../api';
+import { Close as CloseIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getUser, getPosts, followUserApi, unfollowUserApi } from '../api';
 import PostComponent from './Post';
-import { getPosts } from '../api';
 
 interface User {
   id: number;
@@ -33,6 +34,7 @@ interface User {
 
 interface UserProfilePageProps {
   username: string;
+  currentUser?: string;
   onClose: () => void;
 }
 
@@ -42,16 +44,15 @@ function TabPanel(props: any) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`profile-tabpanel-${index}`}
-      aria-labelledby={`profile-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box>{children}</Box>}
     </div>
   );
 }
 
-const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, onClose }) => {
+const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, currentUser, onClose }) => {
+  const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
   const [followersList, setFollowersList] = useState<User[]>([]);
   const [followingList, setFollowingList] = useState<User[]>([]);
@@ -61,134 +62,397 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ username, onClose }) 
     queryFn: () => getUser(username),
   });
 
+  const { data: currentUserData } = useQuery({
+    queryKey: ['user', currentUser],
+    queryFn: () => getUser(currentUser!),
+    enabled: !!currentUser,
+  });
+
   const { data: allPosts } = useQuery({
     queryKey: ['posts'],
     queryFn: getPosts,
   });
 
-  const userPosts = allPosts?.filter(p => p.username === username) || [];
+  const isFollowing = currentUser
+    ? (currentUserData?.following || []).includes(username)
+    : false;
+
+  const followMutation = useMutation({
+    mutationFn: () => followUserApi({ currentUser: currentUser!, username }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', currentUser] });
+      queryClient.invalidateQueries({ queryKey: ['user', username] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser', currentUser] });
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: () => unfollowUserApi({ currentUser: currentUser!, username }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', currentUser] });
+      queryClient.invalidateQueries({ queryKey: ['user', username] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser', currentUser] });
+    },
+  });
+
+  const userPosts = allPosts?.filter((p) => p.username === username) || [];
 
   useEffect(() => {
     if (user) {
-      // Fetch followers details
       if (user.followers && user.followers.length > 0) {
         Promise.all(
-          user.followers.map(async (followerUsername) => {
+          user.followers.map(async (u) => {
             try {
-              const response = await fetch(`http://localhost:3000/users/findByUsername/${followerUsername}`);
-              if (response.ok) {
-                return await response.json();
-              }
-              return null;
-            } catch (err) {
-              console.error(`Failed to fetch follower ${followerUsername}:`, err);
+              const r = await fetch(`http://localhost:3000/users/findByUsername/${u}`);
+              return r.ok ? await r.json() : null;
+            } catch {
               return null;
             }
           })
-        ).then(data => setFollowersList(data.filter(f => f !== null))).catch(console.error);
+        ).then((data) => setFollowersList(data.filter(Boolean)));
+      } else {
+        setFollowersList([]);
       }
 
-      // Fetch following details
       if (user.following && user.following.length > 0) {
         Promise.all(
-          user.following.map(async (followingUsername) => {
+          user.following.map(async (u) => {
             try {
-              const response = await fetch(`http://localhost:3000/users/findByUsername/${followingUsername}`);
-              if (response.ok) {
-                return await response.json();
-              }
-              return null;
-            } catch (err) {
-              console.error(`Failed to fetch following ${followingUsername}:`, err);
+              const r = await fetch(`http://localhost:3000/users/findByUsername/${u}`);
+              return r.ok ? await r.json() : null;
+            } catch {
               return null;
             }
           })
-        ).then(data => setFollowingList(data.filter(f => f !== null))).catch(console.error);
+        ).then((data) => setFollowingList(data.filter(Boolean)));
+      } else {
+        setFollowingList([]);
       }
     }
   }, [user]);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  if (userLoading) {
-    return (
-      <Dialog open onClose={onClose} fullWidth maxWidth="md">
-        <DialogContent sx={{ display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress />
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Dialog open onClose={onClose} fullWidth maxWidth="md">
-        <DialogContent>
-          <Typography>User not found</Typography>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar src={user.image ? `http://localhost:3000${user.image}` : undefined} sx={{ width: 60, height: 60 }}>
-          {user.name[0]}
-        </Avatar>
-        <Box>
-          <Typography variant="h6">{user.name}</Typography>
-          <Typography variant="body2" color="textSecondary">{user.username}</Typography>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label="Posts" />
-            <Tab label="Followers" />
-            <Tab label="Following" />
-          </Tabs>
-        </Box>
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          bgcolor: '#000',
+          border: '1px solid #2f3336',
+          borderRadius: 4,
+          maxHeight: '90vh',
+          overflowY: 'auto',
+        },
+      }}
+    >
+      {/* Top bar */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          px: 2,
+          py: 1,
+          borderBottom: '1px solid #2f3336',
+          position: 'sticky',
+          top: 0,
+          bgcolor: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 10,
+          gap: 2,
+        }}
+      >
+        <IconButton onClick={onClose} size="small" sx={{ color: '#e7e9ea' }}>
+          <ArrowBackIcon />
+        </IconButton>
+        {user && (
+          <Box>
+            <Typography variant="body1" fontWeight={800} sx={{ color: '#e7e9ea', lineHeight: 1.2 }}>
+              {user.name}
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#71767b' }}>
+              {userPosts.length} posts
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
-        <TabPanel value={tabValue} index={0}>
-          {userPosts.length === 0 ? (
-            <Typography>No posts yet</Typography>
-          ) : (
-            userPosts.map(post => <PostComponent key={post.id} post={post} />)
-          )}
-        </TabPanel>
+      <DialogContent sx={{ p: 0 }}>
+        {userLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress sx={{ color: '#1d9bf0' }} />
+          </Box>
+        ) : !user ? (
+          <Typography sx={{ color: '#71767b', textAlign: 'center', py: 6 }}>
+            User not found
+          </Typography>
+        ) : (
+          <>
+            {/* Profile Header */}
+            <Box
+              sx={{
+                height: 120,
+                bgcolor: '#1d9bf0',
+                background: 'linear-gradient(135deg, #1d9bf0 0%, #0d47a1 100%)',
+              }}
+            />
+            <Box sx={{ px: 3, pb: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  mt: -5,
+                  mb: 1,
+                }}
+              >
+                <Avatar
+                  src={user.image ? `http://localhost:3000${user.image}` : undefined}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    border: '4px solid #000',
+                    bgcolor: '#2f3336',
+                    fontSize: '2rem',
+                  }}
+                >
+                  {user.name[0].toUpperCase()}
+                </Avatar>
+                {currentUser && currentUser !== username && (
+                  <Button
+                    variant={isFollowing ? 'outlined' : 'contained'}
+                    size="small"
+                    onClick={() => isFollowing ? unfollowMutation.mutate() : followMutation.mutate()}
+                    disabled={followMutation.isPending || unfollowMutation.isPending}
+                    sx={
+                      isFollowing
+                        ? {
+                            borderRadius: 20,
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            color: '#e7e9ea',
+                            borderColor: '#536471',
+                            mt: 6,
+                            '&:hover': {
+                              borderColor: '#f4212e',
+                              color: '#f4212e',
+                              bgcolor: 'rgba(244,33,46,0.1)',
+                            },
+                          }
+                        : {
+                            borderRadius: 20,
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            bgcolor: '#e7e9ea',
+                            color: '#000',
+                            mt: 6,
+                            '&:hover': { bgcolor: '#d7d9da' },
+                          }
+                    }
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Button>
+                )}
+              </Box>
 
-        <TabPanel value={tabValue} index={1}>
-          <List>
-            {followersList.filter(follower => follower && follower.name).length > 0 ? followersList.filter(follower => follower && follower.name).map(follower => (
-              <ListItem key={follower.id}>
-                <ListItemAvatar>
-                  <Avatar src={follower.image ? `http://localhost:3000${follower.image}` : undefined}>
-                    {follower.name ? follower.name[0].toUpperCase() : '?'}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText primary={follower.name} secondary={follower.username} />
-              </ListItem>
-            )) : <Typography>No followers</Typography>}
-          </List>
-        </TabPanel>
+              <Typography variant="h6" fontWeight={800} sx={{ color: '#e7e9ea', lineHeight: 1.2 }}>
+                {user.name}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#71767b', mb: 1 }}>
+                @{user.username}
+              </Typography>
+              {user.bio && (
+                <Typography variant="body1" sx={{ color: '#e7e9ea', mb: 1.5, lineHeight: 1.5 }}>
+                  {user.bio}
+                </Typography>
+              )}
+              <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                <Typography variant="body2" sx={{ color: '#71767b' }}>
+                  📧 {user.email}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#71767b' }}>
+                  · 📱 {user.phone}
+                </Typography>
+              </Box>
 
-        <TabPanel value={tabValue} index={2}>
-          <List>
-            {followingList.filter(following => following && following.name).length > 0 ? followingList.filter(following => following && following.name).map(following => (
-              <ListItem key={following.id}>
-                <ListItemAvatar>
-                  <Avatar src={following.image ? `http://localhost:3000${following.image}` : undefined}>
-                    {following.name ? following.name[0].toUpperCase() : '?'}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText primary={following.name} secondary={following.username} />
-              </ListItem>
-            )) : <Typography>Not following anyone</Typography>}
-          </List>
-        </TabPanel>
+              <Box sx={{ display: 'flex', gap: 2.5, mt: 1 }}>
+                <Box>
+                  <Typography
+                    variant="body2"
+                    component="span"
+                    fontWeight={700}
+                    sx={{ color: '#e7e9ea' }}
+                  >
+                    {user.following?.length || 0}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    component="span"
+                    sx={{ color: '#71767b', ml: 0.5 }}
+                  >
+                    Following
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography
+                    variant="body2"
+                    component="span"
+                    fontWeight={700}
+                    sx={{ color: '#e7e9ea' }}
+                  >
+                    {user.followers?.length || 0}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    component="span"
+                    sx={{ color: '#71767b', ml: 0.5 }}
+                  >
+                    Followers
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Tabs */}
+            <Box
+              sx={{
+                borderBottom: '1px solid #2f3336',
+                position: 'sticky',
+                top: 56,
+                bgcolor: 'rgba(0,0,0,0.9)',
+                backdropFilter: 'blur(12px)',
+                zIndex: 5,
+              }}
+            >
+              <Tabs
+                value={tabValue}
+                onChange={handleTabChange}
+                variant="fullWidth"
+                TabIndicatorProps={{
+                  style: { backgroundColor: '#1d9bf0', height: 3, borderRadius: 3 },
+                }}
+                sx={{
+                  '& .MuiTab-root': {
+                    color: '#71767b',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    '&.Mui-selected': { color: '#e7e9ea' },
+                    '&:hover': { bgcolor: 'rgba(239,243,244,0.05)' },
+                  },
+                }}
+              >
+                <Tab label="Posts" />
+                <Tab label={`Followers (${followersList.length})`} />
+                <Tab label={`Following (${followingList.length})`} />
+              </Tabs>
+            </Box>
+
+            {/* Tab Panels */}
+            <TabPanel value={tabValue} index={0}>
+              {userPosts.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h6" fontWeight={800} sx={{ color: '#e7e9ea', mb: 1 }}>
+                    No posts yet
+                  </Typography>
+                  <Typography sx={{ color: '#71767b' }}>
+                    When {user.name} posts, it'll show up here.
+                  </Typography>
+                </Box>
+              ) : (
+                userPosts.map((post) => (
+                  <PostComponent key={post.id} post={post} currentUser={currentUser} />
+                ))
+              )}
+            </TabPanel>
+
+            <TabPanel value={tabValue} index={1}>
+              <List disablePadding>
+                {followersList.filter((f) => f?.name).length > 0 ? (
+                  followersList.filter((f) => f?.name).map((follower) => (
+                    <ListItem
+                      key={follower.id}
+                      sx={{
+                        borderBottom: '1px solid #2f3336',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar
+                          src={follower.image ? `http://localhost:3000${follower.image}` : undefined}
+                          sx={{ border: '1px solid #2f3336' }}
+                        >
+                          {follower.name[0].toUpperCase()}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography fontWeight={700} sx={{ color: '#e7e9ea' }}>
+                            {follower.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" sx={{ color: '#71767b' }}>
+                            @{follower.username}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <Typography sx={{ color: '#71767b' }}>No followers yet</Typography>
+                  </Box>
+                )}
+              </List>
+            </TabPanel>
+
+            <TabPanel value={tabValue} index={2}>
+              <List disablePadding>
+                {followingList.filter((f) => f?.name).length > 0 ? (
+                  followingList.filter((f) => f?.name).map((f) => (
+                    <ListItem
+                      key={f.id}
+                      sx={{
+                        borderBottom: '1px solid #2f3336',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar
+                          src={f.image ? `http://localhost:3000${f.image}` : undefined}
+                          sx={{ border: '1px solid #2f3336' }}
+                        >
+                          {f.name[0].toUpperCase()}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography fontWeight={700} sx={{ color: '#e7e9ea' }}>
+                            {f.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" sx={{ color: '#71767b' }}>
+                            @{f.username}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <Typography sx={{ color: '#71767b' }}>Not following anyone yet</Typography>
+                  </Box>
+                )}
+              </List>
+            </TabPanel>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
