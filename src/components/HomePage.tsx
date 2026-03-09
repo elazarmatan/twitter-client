@@ -27,7 +27,7 @@ function TabPanel({ children, value, index }: any) {
 
 const APPBAR_H = 56;
 const TABS_H = 52;
-const COMPOSE_H = 73; // desktop compose strip height
+// const COMPOSE_H = 73; // desktop compose strip height
 
 const HomePage: React.FC<HomePageProps> = ({ user, token, onLogout }) => {
   const queryClient = useQueryClient();
